@@ -40,6 +40,50 @@
     </div>
 </div>
 
+<div class="card border-0 shadow-sm rounded-3 mb-4">
+    <div class="card-body">
+        <h2 class="fw-bold mb-3">Data Proses</h2>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">No</th>
+                        <th scope="col">Proses</th>
+                        <th scope="col">OEE</th>
+                        <th scope="col">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($logReports as $index => $logReport)
+                        <tr>
+                            <td>{{ $index + 1 }}</td>
+                            <td>{{ $logReport->process ?? '-' }}</td>
+                            <td>{{ number_format(($logReport->oee ?? 0) * 100, 2) }}%</td>
+                            <td>
+                                @if ($logReport->is_anomaly)
+                                    <span class="badge bg-dark">Anomali</span>
+                                @elseif ($logReport->status === 2)
+                                    <span class="badge bg-success">Optimal</span>
+                                @elseif ($logReport->status === 1)
+                                    <span class="badge bg-warning text-dark">Waspada</span>
+                                @elseif ($logReport->status === 0)
+                                    <span class="badge bg-danger">Kritis</span>
+                                @else
+                                    <span class="badge bg-secondary">Tidak diketahui</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">Tidak ada rekomendasi penanganan.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="machineListModal" tabindex="-1" aria-labelledby="machineListModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-sm rounded-4">
@@ -486,8 +530,8 @@
                 }
             },
             scales: {
-                x: { title: { display: true, text: "Ketersediaan" } },
-                y: { title: { display: true, text: "Mutu & Performa" } }
+                x: { title: { display: true, text: "Availability" } },
+                y: { title: { display: true, text: "Quality & Performance" } }
             }
         }
     });

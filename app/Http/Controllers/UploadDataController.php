@@ -118,9 +118,12 @@ class UploadDataController extends Controller
                     'unschedule_time_shift_available' => $this->toNullableFloat($metrics['Unschedule Time Shift Tersedia'] ?? null),
                     'productive_time' => $this->toNullableFloat($metrics['Waktu Beproduksi'] ?? null),
                     'idle_time' => $this->toNullableFloat($metrics['Idle Time'] ?? null),
+                    'ppt' => $this->toNullableFloat($metrics['PPT'] ?? null),
+                    'running_time' => $this->toNullableFloat($metrics['R'] ?? null),
                     'total_output' => $this->toNullableFloat($metrics['Total Output'] ?? null),
                     'reject_output' => $this->toNullableFloat($metrics['Reject Output'] ?? null),
                     'good_output' => $this->toNullableFloat($metrics['Good Output'] ?? null),
+                    'oee' => $this->toNullableFloat($metrics['OEE'] ?? null),
                     'metrics' => $metrics,
                 ];
             }
@@ -145,6 +148,7 @@ class UploadDataController extends Controller
         DB::table('machines')->insertOrIgnore($machinesCode);
 
         $machines = Machine::query()
+            ->with(['average'])
             ->whereIn('code', collect($machinesCode)->pluck('code')->all())
             ->get()
             ->keyBy('code');
@@ -246,61 +250,71 @@ class UploadDataController extends Controller
 
                 $pot = $insertData['pot'] ?? 1; // Hindari division by zero
 
-                $breakdownLosses = $this->extractLosses($insertData, $this->kategoriBreakdown);
-                $waitingLosses   = $this->extractLosses($insertData, $this->kategoriWaiting);
-                $setupCleanLosses= $this->extractLosses($insertData, $this->kategoriSetupClean);
+                $zScoreParameter = $machine->average;
+
+                $breakdownLosses = $this->extractLosses($insertData, $zScoreParameter, $this->kategoriBreakdown);
+                $waitingLosses   = $this->extractLossesNew($insertData['waiting'] ?? 0, $zScoreParameter['waiting'] ?? 0, $zScoreParameter['waiting_sd'] ?? 1);
+                $setupLosses   = $this->extractLossesNew($insertData['setup'] ?? 0, $zScoreParameter['setup'] ?? 0, $zScoreParameter['setup_sd'] ?? 1);
+                $cleanLosses   = $this->extractLossesNew($insertData['clean'] ?? 0, $zScoreParameter['clean'] ?? 0, $zScoreParameter['clean_sd'] ?? 1);
 
                 $rekomendasiTeks = "";
                 $penyebabUtamaString = "";
 
-                if (!empty($breakdownLosses)) {
-                    // Cek jika ada kerusakan (M1/M2/M4) yang > 0 menit. 
-                    // Dalam manufaktur, mesin rusak selalu menjadi prioritas utama penanganan.
-                    $kodeTertinggi = array_key_first($breakdownLosses);
-                    $menit = $breakdownLosses[$kodeTertinggi];
-                    
-                    if ($menit > 0) {
-                        $rekomendasiTeks = "Prioritas Utama - Kerusakan Mekanis ($kodeTertinggi: $menit menit): " . 
-                                           ($this->kamusRekomendasi[$kodeTertinggi] ?? $this->kamusRekomendasi['DEFAULT']);
-                        $penyebabUtamaString = $kodeTertinggi;
+                if ($insertData['breakdown'] > 0) {
+                    $message = '';
+                    if ($status == 1) {
+                        $message = "Mesin menunjukkan gejala penurunan efisiensi akibat hambatan mekanis. Jadwalkan Preventive Maintenance (perawatan ringan) pada saat pergantian shift atau akhir pekan.";
+                    } elseif ($status == 0) {
+                        $message = "Mesin mengalami kerusakan mekanis yang signifikan. Segera lakukan perbaikan darurat dan evaluasi komponen yang rusak untuk mencegah kerusakan berulang.";
                     }
+                    $recommendations[] = [
+                        'process' => $value['Proses'] ?? null,
+                        'metric' => 'breakdown',
+                        'recommendation' => "Kerusakan Mekanis (Breakdown: {$insertData['breakdown']} menit): " . $message,
+                    ];
                 }
 
-                if (empty($rekomendasiTeks) && !empty($waitingLosses)) {
-                    $kodeTertinggi = array_key_first($waitingLosses);
-                    $menit = $waitingLosses[$kodeTertinggi];
-                    
-                    if ($menit > 0) {
-                        $rekomendasiTeks = "Prioritas Utama - Hambatan Logistik/SDM ($kodeTertinggi: $menit menit): " . 
-                                           ($this->kamusRekomendasi[$kodeTertinggi] ?? $this->kamusRekomendasi['DEFAULT']);
-                        $penyebabUtamaString = $kodeTertinggi;
+                if ($waitingLosses > 0) {
+                    $message = '';
+                    if ($status == 1) {
+                        $message = "Terdeteksi pemborosan waktu tunggu. Cek kembali dengan operator shift atau tim logistik terkait percepatan persiapan material.";
+                    } elseif ($status == 0) {
+                        $message = "Waktu idle/tunggu (waiting) telah merugikan efisiensi utilitas pabrik secara signifikan. Jadwalkan audit lintas departemen (Supply Chain) untuk mengevaluasi alur distribusi dari gudang dan perombakan jadwal serah-terima shift operator.";
                     }
+                    $recommendations[] = [
+                        'process' => $value['Proses'] ?? null,
+                        'metric' => 'waiting' ?? null,
+                        'recommendation' => "Hambatan Logistik/SDM (waiting: {$waitingLosses} menit): " . $message,
+                    ];
                 }
 
-                if (empty($rekomendasiTeks) && !empty($setupCleanLosses)) {
-                    $kodeTertinggi = array_key_first($setupCleanLosses);
-                    $menit = $setupCleanLosses[$kodeTertinggi];
-                    
-                    $persentaseTerbuang = ($menit / $pot) * 100;
-                    $batasAnomali = 20.0; // Ambang batas 20% dari POT (dapat disesuaikan)
-
-                    if ($persentaseTerbuang >= $batasAnomali) {
-                        $rekomendasiTeks = "Peringatan Anomali Waktu Setup ($kodeTertinggi: $menit menit / " . round($persentaseTerbuang, 1) . "% POT): " . 
-                                           ($this->kamusRekomendasi[$kodeTertinggi] ?? $this->kamusRekomendasi['DEFAULT']);
-                        $penyebabUtamaString = $kodeTertinggi;
+                if ($setupLosses > 0) {
+                    $message = '';
+                    if ($status == 1) {
+                        $message = "Waktu penyetelan mesin (setup) sedikit melampaui batas wajar. Lakukan observasi pada teknisi setup.";
+                    } elseif ($status == 0) {
+                        $message = "Waktu setup menggerus kapasitas produksi secara ekstrem. Lakukan revisi Jadwal Induk Produksi untuk mengelompokkan produk dengan ukuran/komponen mesin yang sama agar frekuensi ganti cetakan (changeover) drastis menurun.";
                     }
+                    $recommendations[] = [
+                        'process' => $value['Proses'] ?? null,
+                        'metric' => 'setup' ?? null,
+                        'recommendation' => "Hambatan Setup (setup: {$setupLosses} menit): " . $message,
+                    ];
                 }
 
-                if (empty($rekomendasiTeks)) {
-                    $rekomendasiTeks = "Mesin berstatus Waspada/Kritis, namun kerugian waktu (losses) tersebar merata tanpa ada parameter dominan yang melampaui batas kewajaran. Disarankan melakukan audit performa mesin menyeluruh (General Audit).";
-                    $penyebabUtamaString = "Multiple Minor Issues";
+                if ($cleanLosses > 0) {
+                    $message = '';
+                    if ($status == 1) {
+                        $message = "Durasi transisi pembersihan antar-batch lebih lambat. Lakukan observasi pada teknisi cleaning service dan evaluasi prosedur pembersihan.";
+                    } elseif ($status == 0) {
+                        $message = "Terdeteksi inefisiensi tingkat tinggi akibat kesulitan pembersihan mesin (changeover). Disarankan mengatur ulang urutan produksi berdasarkan matriks pembersihan guna meminimalkan durasi dan tingkat kesulitan pencucian.";
+                    }
+                    $recommendations[] = [
+                        'process' => $value['Proses'] ?? null,
+                        'metric' => 'clean' ?? null,
+                        'recommendation' => "Hambatan Cleaning (clean: {$cleanLosses} menit): " . $message,
+                    ];
                 }
-
-                $recommendations[] = [
-                    'process' => $value['Proses'] ?? null,
-                    'metric' => $penyebabUtamaString ?? null,
-                    'recommendation' => $rekomendasiTeks,
-                ];
 
                 $savedData[] = $insertData;
             }
@@ -360,6 +374,7 @@ class UploadDataController extends Controller
         'P6' => "TINDAKAN MANAJEMEN: Evaluasi efisiensi operator saat Setting Mesin Awal. Pertimbangkan metode SMED (Single-Minute Exchange of Die) untuk mempercepat setup.",
         'P17' => "TINDAKAN MANAJEMEN: Tinjau ulang prosedur pembersihan ganti batch. Waktu yang dihabiskan terindikasi tidak wajar dan menggerus waktu produksi.",
         'P19' => "TINDAKAN MANAJEMEN: Tambah personel cleaning service atau atur ulang jadwal pencucian agar mesin tidak terlalu lama menunggu antrean cuci.",
+
         
         'DEFAULT' => "TINDAKAN MANAJEMEN: Lakukan observasi lapangan. Terdapat inefisiensi minor yang perlu dievaluasi lebih lanjut secara visual."
     ];
@@ -374,19 +389,36 @@ class UploadDataController extends Controller
     /**
      * Helper function untuk mengekstrak dan mengurutkan losses berdasarkan kategori
      */
-    private function extractLosses($dataLog, $kategori)
+    private function extractLosses($dataLog, $zScoreParameter, $kategori)
     {
         $losses = [];
         foreach ($kategori as $kode) {
             // Asumsi field di database menggunakan lowercase atau uppercase sesuai model
             $nilai = $dataLog[$kode] ?? 0;
             if ($nilai > 0) {
-                $losses[$kode] = $nilai;
+                $zScrore = ($nilai - ($zScoreParameter[$kode] ?? 0)) / (($zScoreParameter[$kode . '_sd'] ?? 0) == 0 ? 1 : ($zScoreParameter[$kode . '_sd'] ?? 1)); // Hitung selisih dengan rata-rata (z-score)
+                if ($zScrore > 5) {
+                    $losses[$kode] = $nilai;
+                }
             }
         }
         
-        // Urutkan dari nilai tertinggi ke terendah
-        arsort($losses);
+        return $losses;
+    }
+
+    /**
+     * Helper function untuk mengekstrak dan mengurutkan losses berdasarkan kategori
+     */
+    private function extractLossesNew($nilai, $mean, $sd)
+    {
+        $losses = 0;
+        if ($nilai > 0) {
+            $zScrore = ($nilai - $mean) / ($sd == 0 ? 1 : $sd); // Hitung selisih dengan rata-rata (z-score)
+            if ($zScrore > 5) {
+                $losses = $nilai;
+            }
+        }
+
         return $losses;
     }
 
@@ -399,8 +431,12 @@ class UploadDataController extends Controller
                 'Proses' => $row['process'],
                 'POT' => $row['pot'],
                 'Waktu_Beproduksi' => $row['productive_time'],
+                'Idle_Time' => $row['idle_time'],
+                'PPT' => $row['ppt'],
+                'Running_Time' => $row['running_time'],
                 'Total_Output' => $row['total_output'],
                 'Good_Output' => $row['good_output'],
+                'OEE' => $row['oee'],
             ];
         }
 

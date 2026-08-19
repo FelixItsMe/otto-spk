@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Model;
 
 class Machine extends Model
@@ -15,19 +16,14 @@ class Machine extends Model
         'name',
         'status',
     ];
-
-    public function productionLogs(): HasMany
+    
+    /**
+     * Get the average associated with the Machine
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne
+     */
+    public function average(): HasOne
     {
-        return $this->hasMany(ProductionLog::class);
-    }
-
-    public function analysisResults(): HasMany
-    {
-        return $this->hasMany(AnalysisResult::class);
-    }
-
-    public function oeeReports(): HasMany
-    {
-        return $this->hasMany(OeeReport::class);
+        return $this->hasOne(MachineAverage::class);
     }
 }

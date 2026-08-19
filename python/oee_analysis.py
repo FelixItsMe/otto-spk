@@ -41,18 +41,19 @@ def main() -> None:
         return
 
     # Feature engineering A, P, Q
-    numeric_cols = ["POT", "Waktu_Beproduksi", "Total_Output", "Good_Output"]
+    numeric_cols = ["POT", "Waktu_Beproduksi", "Total_Output", "Good_Output", "Running_Time", "Idle_Time", "PPT"]
     for col in numeric_cols:
         df_all[col] = pd.to_numeric(df_all[col], errors="coerce")
 
-    df_all["Availability"] = df_all["Waktu_Beproduksi"] / df_all["POT"]
+    df_all["Availability"] = df_all["Running_Time"] / df_all["PPT"]
     df_all["Quality"] = df_all["Good_Output"] / df_all["Total_Output"]
 
-    df_all["Current_Rate"] = df_all["Total_Output"] / df_all["Waktu_Beproduksi"]
+    df_all["Current_Rate"] = df_all["Total_Output"] / df_all["Availability"]
     df_all["Current_Rate"].replace([np.inf, -np.inf], np.nan, inplace=True)
 
     max_rate_per_machine = df_all.groupby("Proses")["Current_Rate"].transform("max")
     df_all["Performance"] = df_all["Current_Rate"] / max_rate_per_machine
+    # df_all["Performance"] = df_all["OEE"] / (df_all["Availability"] * df_all["Quality"])
 
     df_all.fillna(0, inplace=True)
     for col in ["Availability", "Performance", "Quality"]:

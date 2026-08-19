@@ -192,11 +192,25 @@
                 <small class="text-muted">{{ $pageSubtitle ?? 'Tinjauan efisiensi operasional pabrik' }}</small>
             </div>
             <div class="d-flex align-items-center">
-                <div class="me-3 text-end">
-                    <span class="d-block fw-bold" style="font-size: 0.9rem;">Bpk. Supervisor</span>
-                    <span class="badge bg-orange">Admin Produksi</span>
+                <div class="dropdown">
+                    <button class="btn btn-link text-decoration-none d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="me-3 text-end">
+                            <span class="d-block fw-bold" style="font-size: 0.9rem;">Bpk. Supervisor</span>
+                            <span class="badge bg-orange">Admin Produksi</span>
+                        </div>
+                        <img src="https://ui-avatars.com/api/?name=Supervisor&background=FF7A00&color=fff" alt="User" class="rounded-circle" width="40">
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                        <li><a class="dropdown-item" href="#"><i class="fa-solid fa-user me-2"></i> Profile</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form id="logoutForm" action="{{ route('logout') }}" method="POST" class="d-inline">
+                                @csrf
+                                <button type="submit" class="dropdown-item"><i class="fa-solid fa-sign-out-alt me-2"></i> Logout</button>
+                            </form>
+                        </li>
+                    </ul>
                 </div>
-                <img src="https://ui-avatars.com/api/?name=Supervisor&background=FF7A00&color=fff" alt="User" class="rounded-circle" width="40">
             </div>
         </div>
 
