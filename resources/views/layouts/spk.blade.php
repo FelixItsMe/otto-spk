@@ -174,9 +174,7 @@
 <div id="app-section">
     <aside class="sidebar">
         <div class="sidebar-header">
-            <i class="fa-solid fa-industry text-orange fs-2"></i>
-            <h5 class="fw-bold mt-2 mb-0">PT. OTTO</h5>
-            <small class="text-muted">Decision Support System</small>
+            <img src="{{ asset('assets/images/logo.png') }}" alt="Logo PT. OTTO" class="img-fluid" style="max-height: 50px;">
         </div>
         <ul class="sidebar-menu">
             <li><a href="{{ route('dashboard.index') }}" class="{{ request()->routeIs('dashboard.*') ? 'active' : '' }}"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
@@ -195,10 +193,10 @@
                 <div class="dropdown">
                     <button class="btn btn-link text-decoration-none d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                         <div class="me-3 text-end">
-                            <span class="d-block fw-bold" style="font-size: 0.9rem;">Bpk. Supervisor</span>
-                            <span class="badge bg-orange">Admin Produksi</span>
+                            <span class="d-block fw-bold" style="font-size: 0.9rem;">{{ auth()->user()->name }}</span>
+                            <span class="badge bg-orange">{{ auth()->user()->role }}</span>
                         </div>
-                        <img src="https://ui-avatars.com/api/?name=Supervisor&background=FF7A00&color=fff" alt="User" class="rounded-circle" width="40">
+                        <img src="https://ui-avatars.com/api/?name={{ auth()->user()->name }}&background=FF7A00&color=fff" alt="User" class="rounded-circle" width="40">
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                         <li><a class="dropdown-item" href="#"><i class="fa-solid fa-user me-2"></i> Profile</a></li>

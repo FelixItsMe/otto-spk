@@ -353,33 +353,6 @@ class UploadDataController extends Controller
     }
 
     /**
-     * Kamus Keputusan (Rule-Based Dictionary)
-     * Memetakan kode downtime ke teks rekomendasi strategis bulanan.
-     */
-    private $kamusRekomendasi = [
-        // Kategori BREAKDOWN (Kritis - Prioritas Tertinggi)
-        'M1' => "TINDAKAN MANAJEMEN: Terbitkan Work Order darurat untuk teknisi engineering. Lakukan Root Cause Analysis mekanis untuk mencegah kerusakan berulang.",
-        'M2' => "TINDAKAN MANAJEMEN: Evaluasi ketersediaan suku cadang (sparepart) dan jadwalkan Preventive Maintenance (M5) untuk mengganti komponen yang mulai aus.",
-        'M4' => "TINDAKAN MANAJEMEN: Lakukan audit utilitas pabrik (listrik, angin, air) di area mesin ini yang menyebabkan gangguan eksternal.",
-
-        // Kategori WAITING (Manajemen & Supply Chain - Prioritas Kedua)
-        'L1' => "TINDAKAN MANAJEMEN: Jadwalkan meeting koordinasi lintas departemen dengan tim Warehouse terkait bottleneck suplai material terencana.",
-        'L3' => "TINDAKAN MANAJEMEN: Evaluasi sistem permintaan material darurat. Percepat respon Gudang untuk material tidak terencana.",
-        'P10' => "TINDAKAN MANAJEMEN: Lakukan Line Balancing. Mesin ini tertahan karena proses di mesin hulu (sebelumnya) terlalu lambat.",
-        'H1' => "TINDAKAN MANAJEMEN: Tegaskan SOP kedisiplinan dan evaluasi mekanisme serah terima shift agar mesin tidak idle saat jam istirahat.",
-        'H4' => "TINDAKAN MANAJEMEN: Atur ulang jadwal operator cadangan (reliever) untuk meng-cover keperluan pribadi operator utama.",
-        
-        // Kategori SETUP & CLEANING (Prioritas Ketiga - Hanya jika mendominasi persentase batas anomali)
-        'P4' => "TINDAKAN MANAJEMEN: Rancang ulang Master Production Schedule (MPS) bulan depan. Kelompokkan produk sejenis guna mengurangi frekuensi cuci total antar produk.",
-        'P6' => "TINDAKAN MANAJEMEN: Evaluasi efisiensi operator saat Setting Mesin Awal. Pertimbangkan metode SMED (Single-Minute Exchange of Die) untuk mempercepat setup.",
-        'P17' => "TINDAKAN MANAJEMEN: Tinjau ulang prosedur pembersihan ganti batch. Waktu yang dihabiskan terindikasi tidak wajar dan menggerus waktu produksi.",
-        'P19' => "TINDAKAN MANAJEMEN: Tambah personel cleaning service atau atur ulang jadwal pencucian agar mesin tidak terlalu lama menunggu antrean cuci.",
-
-        
-        'DEFAULT' => "TINDAKAN MANAJEMEN: Lakukan observasi lapangan. Terdapat inefisiensi minor yang perlu dievaluasi lebih lanjut secara visual."
-    ];
-
-    /**
      * Kategori Downtime untuk Hierarki Rule-Based
      */
     private $kategoriBreakdown = ['m1', 'm2', 'm4'];
