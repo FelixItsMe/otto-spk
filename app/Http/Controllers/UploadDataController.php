@@ -7,6 +7,7 @@ use App\Models\Machine;
 use App\Models\TreatmentRecommendation;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -15,6 +16,7 @@ use SimpleXMLElement;
 use ZipArchive;
 use Symfony\Component\Process\Process;
 use Throwable;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class UploadDataController extends Controller
 {
@@ -35,10 +37,23 @@ class UploadDataController extends Controller
         ]);
     }
 
+    public function downloadTemplate(): RedirectResponse|BinaryFileResponse
+    {
+        $templatePath = public_path('assets/templates/format_data.xlsx');
+
+        if (!file_exists($templatePath)) {
+            return redirect()
+                ->route('upload.index')
+                ->with('error', 'Template XLSX tidak ditemukan. Silahkan hubungi administrator.');
+        }
+
+        return response()->download($templatePath, 'oee-import-template.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
     public function store(Request $request)
     {
-        $mode = $request->input('mode', 'manual');
-
         $validated = $request->validate([
             'upload_year' => ['required', 'integer', 'min:2000', 'max:' . ((int) now()->format('Y') + 1)],
             'upload_month' => ['required', 'integer', 'min:1', 'max:12'],

@@ -21,6 +21,7 @@ Route::group(['middleware' => 'auth'], function () {
     Route::get('/dashboard/recommendation/{id}', [DashboardController::class, 'getRecommendation'])->name('dashboard.recommendation');
     
     Route::get('/upload-data', [UploadDataController::class, 'index'])->name('upload.index');
+    Route::get('/upload-data/template', [UploadDataController::class, 'downloadTemplate'])->name('upload.template');
     Route::post('/upload-data', [UploadDataController::class, 'store'])->name('upload.store');
     
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');

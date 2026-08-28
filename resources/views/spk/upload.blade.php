@@ -35,7 +35,7 @@
             <div class="col-md-4">
                 <label class="form-label">File Data (.xlsx)</label>
                 <input type="file" name="data_file" class="form-control" accept=".xlsx" required>
-                <small class="text-muted">Format: header Proses, POT, ... sampai Good Output.</small>
+                <a href="{{ route('upload.template') }}" target="_blank" class="text-muted">Download Template</a>
                 @error('data_file')
                     <div class="text-danger">{{ $message }}</div>
                 @enderror
